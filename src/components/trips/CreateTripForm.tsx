@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTrip } from '@/context/TripContext';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,11 +14,12 @@ import {
   DialogClose
 } from '@/components/ui/dialog';
 import EmojiPicker from '@/components/ui/emoji-picker';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 const CreateTripForm = () => {
   const navigate = useNavigate();
   const { createTrip, isLoading } = useTrip();
+  const { user } = useAuth();
   
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -28,12 +30,19 @@ const CreateTripForm = () => {
     e.preventDefault();
     setError('');
     
+    if (!user) {
+      setError('You must be logged in to create a trip');
+      return;
+    }
+    
     if (!name) {
       setError('Please enter a trip name');
       return;
     }
     
     try {
+      console.log("Creating trip with user ID:", user.id);
+      
       const trip = await createTrip({
         name,
         description,
@@ -43,7 +52,11 @@ const CreateTripForm = () => {
         purchases: []
       });
       
-      toast.success(`Trip "${name}" created successfully!`);
+      toast({
+        title: "Success",
+        description: `Trip "${name}" created successfully!`,
+      });
+      
       navigate(`/trip/${trip.id}`);
     } catch (err) {
       console.error("Error creating trip:", err);

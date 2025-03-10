@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTrip } from '@/context/TripContext';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,11 +12,12 @@ import {
   DialogDescription,
   DialogClose
 } from '@/components/ui/dialog';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 const JoinTripForm = () => {
   const navigate = useNavigate();
   const { joinTrip, isLoading } = useTrip();
+  const { user } = useAuth();
   
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -24,16 +26,26 @@ const JoinTripForm = () => {
     e.preventDefault();
     setError('');
     
+    if (!user) {
+      setError('You must be logged in to join a trip');
+      return;
+    }
+    
     if (!code || code.length !== 6) {
       setError('Please enter a valid 6-character trip code');
       return;
     }
     
     try {
+      console.log("Joining trip with code:", code, "User ID:", user.id);
+      
       const joinedTrip = await joinTrip(code);
       
       if (joinedTrip) {
-        toast.success(`Joined trip "${joinedTrip.name}" successfully!`);
+        toast({
+          title: "Success",
+          description: `Joined trip "${joinedTrip.name}" successfully!`,
+        });
         navigate(`/trip/${joinedTrip.id}`);
       } else {
         setError('Could not find a trip with this code');
