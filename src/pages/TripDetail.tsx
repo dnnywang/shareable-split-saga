@@ -16,38 +16,61 @@ import {
 import { Plus } from 'lucide-react';
 
 const TripDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { trips, selectTrip, currentTrip } = useTrip();
+  const { trips, selectTrip, currentTrip, isLoading } = useTrip();
   const [showPurchaseForm, setShowPurchaseForm] = useState(false);
+  
+  console.log("TripDetail rendered with tripId:", tripId);
+  console.log("Current trips:", trips);
   
   // Set the current trip based on the URL param
   useEffect(() => {
-    if (id) {
-      selectTrip(id);
+    if (tripId) {
+      console.log("Selecting trip with ID:", tripId);
+      selectTrip(tripId);
     }
-  }, [id, selectTrip]);
+  }, [tripId, selectTrip, trips]);
   
   // If trip is not found, redirect to home
   useEffect(() => {
-    if (trips.length > 0 && id && !trips.some(trip => trip.id === id)) {
-      navigate('/');
+    if (trips.length > 0 && tripId && !trips.some(trip => trip.id === tripId)) {
+      console.log("Trip not found, redirecting to dashboard");
+      navigate('/dashboard');
     }
-  }, [trips, id, navigate]);
+  }, [trips, tripId, navigate]);
   
   // Check if user is logged in
   useEffect(() => {
     if (!user) {
+      console.log("User not logged in, redirecting to home");
       navigate('/');
     }
   }, [user, navigate]);
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl text-muted-foreground">Loading trip data...</p>
+        </div>
+      </div>
+    );
+  }
   
   if (!currentTrip) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-xl text-muted-foreground">Loading trip...</p>
+          <Button 
+            variant="link" 
+            onClick={() => navigate('/dashboard')}
+            className="mt-4"
+          >
+            Return to Dashboard
+          </Button>
         </div>
       </div>
     );

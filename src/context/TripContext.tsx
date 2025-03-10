@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { mockTrips, mockPurchases, Trip as MockTrip, Purchase as MockPurchase, User } from "@/lib/mockData";
 import { useAuth } from "./AuthContext";
 
@@ -43,14 +43,54 @@ const TripContext = createContext<TripContextType | undefined>(undefined);
 
 export const TripProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  const [trips, setTrips] = useState<Trip[]>(mockTrips.map(trip => ({ ...trip, purchases: [] })));
-  const [purchases, setPurchases] = useState<Purchase[]>(mockPurchases);
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [currentTrip, setCurrentTripState] = useState<Trip | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Initialize trips and purchases from mock data
+  useEffect(() => {
+    // Convert mock trips to our Trip type with purchases array
+    const initialTrips = mockTrips.map(trip => ({ 
+      ...trip, 
+      purchases: [] 
+    }));
+    
+    setTrips(initialTrips);
+    
+    // Set purchases and update trip.purchases references
+    setPurchases(mockPurchases);
+    
+    // Update each trip's purchases array
+    const updatedTrips = initialTrips.map(trip => {
+      const tripPurchases = mockPurchases.filter(p => p.tripId === trip.id);
+      return {
+        ...trip,
+        purchases: tripPurchases
+      };
+    });
+    
+    setTrips(updatedTrips);
+  }, []);
+
   const selectTrip = (tripId: string) => {
-    const trip = trips.find(t => t.id === tripId) || null;
-    setCurrentTripState(trip);
+    const trip = trips.find(t => t.id === tripId);
+    
+    if (trip) {
+      // Get all purchases for this trip
+      const tripPurchases = purchases.filter(p => p.tripId === tripId);
+      
+      // Create a new trip object with the purchases array
+      const tripWithPurchases = {
+        ...trip,
+        purchases: tripPurchases
+      };
+      
+      setCurrentTripState(tripWithPurchases);
+    } else {
+      console.error(`Trip with id ${tripId} not found`);
+      setCurrentTripState(null);
+    }
   };
 
   const setCurrentTrip = (tripId: string | null) => {
@@ -122,7 +162,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
       
       setPurchases(prev => [...prev, newPurchase]);
       
-      // Update trip total
+      // Update trip total and add purchase to trip.purchases
       setTrips(prev => prev.map(trip => {
         if (trip.id === purchaseData.tripId) {
           return {
@@ -133,6 +173,15 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         }
         return trip;
       }));
+      
+      // Update current trip if this purchase belongs to it
+      if (currentTrip && currentTrip.id === purchaseData.tripId) {
+        setCurrentTripState({
+          ...currentTrip,
+          totalSpent: currentTrip.totalSpent + purchaseData.amount,
+          purchases: [...(currentTrip.purchases || []), newPurchase]
+        });
+      }
       
       return newPurchase;
     } finally {
@@ -161,6 +210,15 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
           }
           return trip;
         }));
+        
+        // Update current trip if this purchase belongs to it
+        if (currentTrip && currentTrip.id === purchaseToRemove.tripId) {
+          setCurrentTripState({
+            ...currentTrip,
+            totalSpent: currentTrip.totalSpent - purchaseToRemove.amount,
+            purchases: currentTrip.purchases.filter(p => p.id !== purchaseId)
+          });
+        }
       }
     } finally {
       setIsLoading(false);
