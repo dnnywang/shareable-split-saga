@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTrip } from '@/context/TripContext';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ interface SplitSelection {
 }
 
 const PurchaseForm = ({ tripId, onClose }: PurchaseFormProps) => {
+  const { user } = useAuth();
   const { currentTrip, addPurchase, isLoading } = useTrip();
   const { toast } = useToast();
   
@@ -156,7 +158,8 @@ const PurchaseForm = ({ tripId, onClose }: PurchaseFormProps) => {
         title: title,
         amount: amount,
         paidBy: paidBy,
-        splitBetween: splitBetween
+        splitBetween: splitBetween,
+        createdBy: user?.id || ''
       });
       
       toast({

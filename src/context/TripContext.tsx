@@ -1,11 +1,17 @@
+
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // Export these interfaces so they can be used in other components
-export interface Participant extends User {
-  // Add any additional properties needed for participants
+export interface Participant {
+  id: string;
+  email: string;
+  name: string | null;
+  emoji: string | null;
+  username: string;
+  avatarUrl?: string;
 }
 
 export interface Payment {
@@ -88,13 +94,21 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         throw participantError;
       }
 
+      if (!participantData || participantData.length === 0) {
+        // If user has no trips, return empty arrays
+        setTrips([]);
+        setPurchases([]);
+        setIsLoading(false);
+        return;
+      }
+
       const tripIds = participantData.map(p => p.trip_id);
       
       // Get the trip details
       const { data: tripsData, error: tripsError } = await supabase
         .from('trips')
         .select('*')
-        .in('id', tripIds.length > 0 ? tripIds : ['no-trips-placeholder']);
+        .in('id', tripIds);
 
       if (tripsError) {
         throw tripsError;
@@ -148,15 +162,15 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
             id: purchase.id,
             tripId: purchase.trip_id,
             title: purchase.title,
-            amount: parseFloat(purchase.amount),
+            amount: parseFloat(purchase.amount.toString()),
             date: purchase.date,
             paidBy: payersData.map(payer => ({
               userId: payer.user_id,
-              amount: parseFloat(payer.amount)
+              amount: parseFloat(payer.amount.toString())
             })),
             splitBetween: splitsData.map(split => ({
               userId: split.user_id,
-              amount: parseFloat(split.amount)
+              amount: parseFloat(split.amount.toString())
             })),
             createdBy: purchase.created_by
           };
@@ -179,6 +193,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
           participants: participantsData.map(p => ({
             id: p.user_id,
             email: p.username, // Using username as email for now
+            username: p.username,
             emoji: p.emoji,
             name: p.username
           })),
@@ -373,7 +388,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
           trip_id: purchaseData.tripId,
           title: purchaseData.title,
           amount: purchaseData.amount,
-          created_by: user?.id,
+          created_by: purchaseData.createdBy,
           date: new Date().toISOString()
         })
         .select()
