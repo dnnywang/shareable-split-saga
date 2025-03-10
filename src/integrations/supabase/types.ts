@@ -9,13 +9,212 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          emoji: string | null
+          id: string
+          name: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          emoji?: string | null
+          id: string
+          name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          emoji?: string | null
+          id?: string
+          name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      purchase_payers: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          purchase_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          purchase_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          purchase_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_payers_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_splits: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          purchase_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          purchase_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          purchase_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_splits_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchases: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string
+          date: string
+          id: string
+          title: string
+          trip_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by: string
+          date?: string
+          id?: string
+          title: string
+          trip_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string
+          date?: string
+          id?: string
+          title?: string
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchases_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trip_participants: {
+        Row: {
+          created_at: string
+          emoji: string | null
+          id: string
+          trip_id: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          trip_id: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          trip_id?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_participants_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trips: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          description: string | null
+          emoji: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          emoji?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          emoji?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_trip_participant: {
+        Args: {
+          trip_id: string
+          user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

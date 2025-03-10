@@ -1,26 +1,36 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SignInForm from '@/components/auth/SignInForm';
 import SignUpForm from '@/components/auth/SignUpForm';
+import { toast } from 'sonner';
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('signin');
 
   // Redirect to dashboard if user is already logged in
-  if (user) {
-    navigate('/dashboard');
-    return null;
-  }
+  useEffect(() => {
+    if (user && !isLoading) {
+      navigate('/dashboard');
+    }
+  }, [user, isLoading, navigate]);
 
   const handleToggleForm = () => {
     setActiveTab(activeTab === 'signin' ? 'signup' : 'signin');
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

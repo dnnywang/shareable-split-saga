@@ -34,20 +34,21 @@ const SignUpForm = ({ onToggleForm }: SignUpFormProps) => {
     }
 
     try {
-      // Fixed arguments to match the updated signUp function
       await signUp(email, password, username, emoji);
+      onToggleForm(); // Switch to sign in tab after successful registration
     } catch (err) {
+      // Error is handled in the AuthContext and displayed via toast
       setError(err instanceof Error ? err.message : "Failed to create account");
     }
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto animate-fade-in">
-      <CardHeader>
+    <Card className="w-full max-w-md mx-auto animate-fade-in border-0 shadow-none">
+      <CardHeader className="px-0 pt-0">
         <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
         <CardDescription>Sign up for a new account to start splitting bills</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-0">
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <div className="p-3 bg-red-100 text-red-700 rounded-md text-sm">{error}</div>}
           
@@ -93,6 +94,7 @@ const SignUpForm = ({ onToggleForm }: SignUpFormProps) => {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            <p className="text-xs text-muted-foreground">Password must be at least 6 characters</p>
           </div>
           
           <Button type="submit" className="w-full" disabled={isLoading}>
@@ -100,7 +102,7 @@ const SignUpForm = ({ onToggleForm }: SignUpFormProps) => {
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex justify-center">
+      <CardFooter className="flex justify-center px-0">
         <p className="text-sm text-muted-foreground">
           Already have an account?{" "}
           <Button variant="link" className="p-0" onClick={onToggleForm}>
