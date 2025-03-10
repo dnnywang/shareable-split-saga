@@ -1,14 +1,16 @@
-import { useState } from "react";
-import { useEffect } from "react";
+
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useTrip } from "@/context/TripContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import CreateTripForm from "@/components/trips/CreateTripForm";
 import JoinTripForm from "@/components/trips/JoinTripForm";
 import TripCard from "@/components/trips/TripCard";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, UserPlus } from "lucide-react";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
@@ -16,8 +18,13 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [activeDialog, setActiveDialog] = useState<"create" | "join" | null>(null);
 
+  useEffect(() => {
+    if (!user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
+
   if (!user) {
-    navigate("/");
     return null;
   }
 
@@ -60,32 +67,24 @@ const Dashboard = () => {
             <Dialog open={activeDialog === "create"} onOpenChange={(open) => setActiveDialog(open ? "create" : null)}>
               <DialogTrigger asChild>
                 <Button className="gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus">
-                    <path d="M5 12h14" />
-                    <path d="M12 5v14" />
-                  </svg>
+                  <Plus size={18} />
                   Create Trip
                 </Button>
               </DialogTrigger>
               <DialogContent>
-                <CreateTripForm onSuccess={() => setActiveDialog(null)} />
+                <CreateTripForm />
               </DialogContent>
             </Dialog>
             
             <Dialog open={activeDialog === "join"} onOpenChange={(open) => setActiveDialog(open ? "join" : null)}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user-plus">
-                    <path d="M16 21v-2a4 4 0 1 0 0 4h4a4 4 0 1 1 0 4H8" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M19 8v6" />
-                    <path d="M16 11h6" />
-                  </svg>
+                  <UserPlus size={18} />
                   Join Trip
                 </Button>
               </DialogTrigger>
               <DialogContent>
-                <JoinTripForm onSuccess={() => setActiveDialog(null)} />
+                <JoinTripForm />
               </DialogContent>
             </Dialog>
           </div>

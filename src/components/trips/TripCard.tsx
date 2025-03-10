@@ -6,9 +6,10 @@ import { formatDistanceToNow } from 'date-fns';
 
 interface TripCardProps {
   trip: Trip;
+  onClick?: () => void;
 }
 
-const TripCard = ({ trip }: TripCardProps) => {
+const TripCard = ({ trip, onClick }: TripCardProps) => {
   const navigate = useNavigate();
   
   // Extract the last purchase date for displaying "updated X time ago"
@@ -29,7 +30,11 @@ const TripCard = ({ trip }: TripCardProps) => {
   };
   
   const handleClick = () => {
-    navigate(`/trip/${trip.id}`);
+    if (onClick) {
+      onClick();
+    } else {
+      navigate(`/trip/${trip.id}`);
+    }
   };
   
   return (
