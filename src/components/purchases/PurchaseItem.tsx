@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Purchase, useTrip } from '@/context/TripContext';
+import { useTrip, Purchase } from '@/context/TripContext';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -45,7 +45,7 @@ const PurchaseItem = ({ purchase }: PurchaseItemProps) => {
     return currentTrip.participants.find(p => p.id === id);
   };
   
-  const isPaidByCurrentUser = purchase.paidBy.some(payer => payer.participantId === user?.id);
+  const isPaidByCurrentUser = purchase.paidBy.some(payer => payer.userId === user?.id);
   
   // Is the purchase paid by multiple people?
   const isMultiPayer = purchase.paidBy.length > 1;
@@ -58,9 +58,9 @@ const PurchaseItem = ({ purchase }: PurchaseItemProps) => {
           <p className="text-muted-foreground mb-1">Paid by:</p>
           <div className="space-y-1">
             {purchase.paidBy.map(payer => {
-              const participant = getParticipantById(payer.participantId);
+              const participant = getParticipantById(payer.userId);
               return (
-                <div key={payer.participantId} className="flex items-center justify-between">
+                <div key={payer.userId} className="flex items-center justify-between">
                   <div className="flex items-center">
                     <span className="mr-2">{participant?.emoji}</span>
                     <span>{participant?.username}</span>
@@ -74,7 +74,7 @@ const PurchaseItem = ({ purchase }: PurchaseItemProps) => {
       );
     }
     
-    const payer = getParticipantById(purchase.paidBy[0].participantId);
+    const payer = getParticipantById(purchase.paidBy[0].userId);
     return (
       <div className="flex items-center text-sm text-muted-foreground">
         <span className="mr-1">Paid by</span>
@@ -91,9 +91,9 @@ const PurchaseItem = ({ purchase }: PurchaseItemProps) => {
         <p className="text-muted-foreground mb-2">Split between:</p>
         <div className="space-y-1">
           {purchase.splitBetween.map(split => {
-            const participant = getParticipantById(split.participantId);
+            const participant = getParticipantById(split.userId);
             return (
-              <div key={split.participantId} className="flex items-center justify-between">
+              <div key={split.userId} className="flex items-center justify-between">
                 <div className="flex items-center">
                   <span className="mr-2">{participant?.emoji}</span>
                   <span>{participant?.username}</span>
@@ -118,7 +118,7 @@ const PurchaseItem = ({ purchase }: PurchaseItemProps) => {
   return (
     <Card className={cn(
       "w-full transition-all",
-      isPaidByCurrentUser ? "border-l-4 border-l-split-teal" : ""
+      isPaidByCurrentUser ? "border-l-4 border-l-teal-500" : ""
     )}>
       <CardHeader className="py-3 px-4">
         <div className="flex items-center justify-between">
