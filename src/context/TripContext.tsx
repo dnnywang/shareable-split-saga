@@ -1,10 +1,8 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-// Export these interfaces so they can be used in other components
 export interface Participant {
   id: string;
   email: string;
@@ -226,6 +224,13 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session || !sessionData.session.user) {
+        throw new Error("You must be logged in to create a trip");
+      }
+      
+      console.log("Creating trip with authenticated user ID:", sessionData.session.user.id);
+      
       const { data: newTripData, error: tripError } = await supabase
         .from('trips')
         .insert({
@@ -233,7 +238,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
           description: tripData.description || null,
           emoji: tripData.emoji || "✈️",
           code: tripData.code,
-          created_by: user?.id
+          created_by: sessionData.session.user.id
         })
         .select()
         .single();
@@ -246,7 +251,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         .from('trip_participants')
         .insert({
           trip_id: newTripData.id,
-          user_id: user?.id,
+          user_id: sessionData.session.user.id,
           username: user?.name || user?.email || "",
           emoji: user?.emoji || "😀"
         });
@@ -264,7 +269,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         createdAt: newTripData.created_at,
         totalSpent: 0,
         participants: [{
-          id: user?.id || "",
+          id: sessionData.session.user.id,
           email: user?.email || "",
           name: user?.name || null,
           emoji: user?.emoji || null,
@@ -360,7 +365,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         .insert({
           trip_id: purchaseData.tripId,
           title: purchaseData.title,
-          amount: purchaseData.amount, // This is now properly typed as a number
+          amount: purchaseData.amount,
           created_by: purchaseData.createdBy,
           date: new Date().toISOString()
         })
