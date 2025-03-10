@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { User as SupabaseUser, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +8,8 @@ export interface User {
   email: string;
   name: string | null;
   emoji: string | null;
+  username?: string;
+  avatarUrl?: string;
 }
 
 interface AuthContextType {
@@ -26,13 +27,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session ? mapUserData(session) : null);
       setIsLoading(false);
     });
 
-    // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session) {
@@ -49,14 +48,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Helper function to map Supabase user to our User type
   const mapUserData = (session: Session): User => {
     const supabaseUser = session.user;
     return {
       id: supabaseUser.id,
       email: supabaseUser.email || '',
       name: supabaseUser.user_metadata.name || supabaseUser.email?.split('@')[0] || null,
-      emoji: supabaseUser.user_metadata.emoji || '😀'
+      emoji: supabaseUser.user_metadata.emoji || '😀',
+      username: supabaseUser.user_metadata.name || supabaseUser.email?.split('@')[0] || null,
+      avatarUrl: supabaseUser.user_metadata.avatarUrl || null,
     };
   };
 

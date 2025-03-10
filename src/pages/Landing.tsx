@@ -57,7 +57,7 @@ const Landing = () => {
           <div className="flex items-center gap-4">
             <div className="text-sm font-medium flex items-center">
               <span className="mr-2 text-xl">{user.emoji}</span>
-              <span>{user.username}</span>
+              <span>{user.name}</span>
             </div>
             
             <Button 

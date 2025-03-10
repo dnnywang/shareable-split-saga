@@ -47,7 +47,7 @@ const Dashboard = () => {
             <div className="flex items-center gap-2">
               <Avatar>
                 <AvatarFallback>{user.email?.[0]?.toUpperCase() || "U"}</AvatarFallback>
-                <AvatarImage src={user.avatarUrl} />
+                {user.avatarUrl && <AvatarImage src={user.avatarUrl} />}
               </Avatar>
               <span className="font-medium hidden md:inline">{user.email}</span>
             </div>
