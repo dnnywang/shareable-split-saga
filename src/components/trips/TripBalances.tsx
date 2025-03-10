@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Payment, Participant, useTrip } from '@/context/TripContext';
+import { useTrip, Payment, Participant } from '@/context/TripContext';
 import { 
   Card, 
   CardContent, 

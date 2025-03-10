@@ -1,13 +1,13 @@
-
 import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useTrip } from "@/context/TripContext";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CreateTripForm } from "@/components/trips/CreateTripForm";
-import { JoinTripForm } from "@/components/trips/JoinTripForm";
-import { TripCard } from "@/components/trips/TripCard";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import CreateTripForm from "@/components/trips/CreateTripForm";
+import JoinTripForm from "@/components/trips/JoinTripForm";
+import TripCard from "@/components/trips/TripCard";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 const Dashboard = () => {
@@ -76,7 +76,7 @@ const Dashboard = () => {
               <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user-plus">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <path d="M16 21v-2a4 4 0 1 0 0 4h4a4 4 0 1 1 0 4H8" />
                     <circle cx="9" cy="7" r="4" />
                     <path d="M19 8v6" />
                     <path d="M16 11h6" />

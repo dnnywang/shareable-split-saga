@@ -34,6 +34,7 @@ const SignUpForm = ({ onToggleForm }: SignUpFormProps) => {
     }
 
     try {
+      // Fixed arguments to match the updated signUp function
       await signUp(email, password, username, emoji);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create account");

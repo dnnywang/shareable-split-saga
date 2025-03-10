@@ -1,8 +1,8 @@
-
 export interface User {
   id: string;
   email: string;
   name?: string;
+  username?: string;
   avatarUrl?: string;
   emoji?: string;
 }
@@ -16,6 +16,7 @@ export interface Trip {
   createdAt: string;
   participants: User[];
   totalSpent: number;
+  purchases?: Purchase[];
 }
 
 export interface Purchase {
@@ -33,24 +34,28 @@ export const mockUsers: User[] = [
     id: "user-1",
     email: "user1@example.com",
     name: "John Doe",
+    username: "John Doe",
     emoji: "👨‍💻"
   },
   {
     id: "user-2",
     email: "user2@example.com",
     name: "Jane Smith",
+    username: "Jane Smith",
     emoji: "👩‍🎨"
   },
   {
     id: "user-3",
     email: "user3@example.com",
     name: "Bob Johnson",
+    username: "Bob Johnson",
     emoji: "🧗‍♂️"
   },
   {
     id: "user-4",
     email: "user4@example.com",
     name: "Alice Williams",
+    username: "Alice Williams",
     emoji: "🏄‍♀️"
   }
 ];

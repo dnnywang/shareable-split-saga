@@ -5,7 +5,7 @@ import { mockUsers, User } from "@/lib/mockData";
 interface AuthContextType {
   user: User | null;
   signIn: (email: string, password: string) => Promise<User>;
-  signUp: (email: string, password: string) => Promise<User>;
+  signUp: (email: string, password: string, username?: string, emoji?: string) => Promise<User>;
   signOut: () => void;
   isLoading: boolean;
 }
@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return existingUser;
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, username?: string, emoji?: string) => {
     setIsLoading(true);
     
     // Simulate API authentication delay
@@ -69,7 +69,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const newUser: User = {
       id: `user-${Date.now()}`,
       email,
-      emoji: "😀" // Default emoji
+      name: username || email.split('@')[0],
+      emoji: emoji || "😀" // Default emoji
     };
     
     // Save user to state and local storage

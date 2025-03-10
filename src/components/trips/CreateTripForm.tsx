@@ -36,12 +36,30 @@ const CreateTripForm = () => {
     }
     
     try {
-      const trip = await createTrip(name, description, emoji);
+      // Fixed to match the interface in TripContext
+      const trip = await createTrip({
+        name,
+        description,
+        emoji,
+        code: generateRandomCode(),
+        participants: []
+      });
+      
       setOpen(false);
       navigate(`/trip/${trip.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create trip');
     }
+  };
+  
+  // Helper function to generate a random 6-character trip code
+  const generateRandomCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
   };
   
   return (
