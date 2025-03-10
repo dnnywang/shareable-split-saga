@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTrip } from '@/context/TripContext';
 import { useAuth } from '@/context/AuthContext';
@@ -7,12 +7,20 @@ import TripHeader from '@/components/trips/TripHeader';
 import TripBalances from '@/components/trips/TripBalances';
 import PurchaseForm from '@/components/purchases/PurchaseForm';
 import PurchaseItem from '@/components/purchases/PurchaseItem';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Plus } from 'lucide-react';
 
 const TripDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { trips, selectTrip, currentTrip } = useTrip();
+  const [showPurchaseForm, setShowPurchaseForm] = useState(false);
   
   // Set the current trip based on the URL param
   useEffect(() => {
@@ -54,7 +62,20 @@ const TripDetail = () => {
         <div className="lg:col-span-3 space-y-4">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-xl font-semibold">Purchases</h2>
-            <PurchaseForm />
+            <Dialog open={showPurchaseForm} onOpenChange={setShowPurchaseForm}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="mr-1" size={16} />
+                  Add Purchase
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <PurchaseForm 
+                  tripId={currentTrip.id} 
+                  onClose={() => setShowPurchaseForm(false)} 
+                />
+              </DialogContent>
+            </Dialog>
           </div>
           
           {currentTrip.purchases.length === 0 ? (
@@ -63,7 +84,20 @@ const TripDetail = () => {
               <p className="text-muted-foreground mb-6">
                 Add your first purchase to start tracking expenses
               </p>
-              <PurchaseForm />
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-1" size={16} />
+                    Add First Purchase
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <PurchaseForm 
+                    tripId={currentTrip.id} 
+                    onClose={() => setShowPurchaseForm(false)} 
+                  />
+                </DialogContent>
+              </Dialog>
             </div>
           ) : (
             <div className="space-y-4">
