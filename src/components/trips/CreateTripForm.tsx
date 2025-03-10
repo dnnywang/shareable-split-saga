@@ -46,6 +46,7 @@ const CreateTripForm = () => {
       toast.success(`Trip "${name}" created successfully!`);
       navigate(`/trip/${trip.id}`);
     } catch (err) {
+      console.error("Error creating trip:", err);
       setError(err instanceof Error ? err.message : 'Failed to create trip');
     }
   };

@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -246,8 +247,8 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         .insert({
           trip_id: newTripData.id,
           user_id: user?.id,
-          username: user?.name || user?.email,
-          emoji: user?.emoji
+          username: user?.name || user?.email || "",
+          emoji: user?.emoji || "😀"
         });
 
       if (participantError) {
@@ -359,7 +360,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         .insert({
           trip_id: purchaseData.tripId,
           title: purchaseData.title,
-          amount: parseFloat(purchaseData.amount.toString()),
+          amount: purchaseData.amount, // This is now properly typed as a number
           created_by: purchaseData.createdBy,
           date: new Date().toISOString()
         })

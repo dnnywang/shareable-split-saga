@@ -39,6 +39,7 @@ const JoinTripForm = () => {
         setError('Could not find a trip with this code');
       }
     } catch (err) {
+      console.error("Error joining trip:", err);
       setError(err instanceof Error ? err.message : 'Failed to join trip');
     }
   };
