@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import EmojiPicker from '@/components/ui/emoji-picker';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const CreateTripForm = () => {
   const navigate = useNavigate();
@@ -30,18 +31,21 @@ const CreateTripForm = () => {
     e.preventDefault();
     setError('');
     
-    if (!user) {
-      setError('You must be logged in to create a trip');
-      return;
-    }
-    
-    if (!name) {
-      setError('Please enter a trip name');
-      return;
-    }
-    
     try {
-      console.log("Creating trip with user ID:", user.id);
+      // Get the current session directly to ensure we have the most up-to-date user ID
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session || !sessionData.session.user) {
+        setError('You must be logged in to create a trip');
+        return;
+      }
+      
+      if (!name) {
+        setError('Please enter a trip name');
+        return;
+      }
+      
+      console.log("Creating trip with authenticated user ID:", sessionData.session.user.id);
       
       const trip = await createTrip({
         name,
