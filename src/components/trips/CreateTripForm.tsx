@@ -47,11 +47,14 @@ const CreateTripForm = () => {
       
       console.log("Creating trip with authenticated user ID:", sessionData.session.user.id);
       
+      // Create unique code for the trip (6 character alphanumeric code)
+      const tripCode = generateRandomCode();
+      
       const trip = await createTrip({
         name,
         description,
         emoji,
-        code: generateRandomCode(),
+        code: tripCode,
         participants: [],
         purchases: []
       });
