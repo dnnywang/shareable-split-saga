@@ -1,8 +1,9 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTrip } from '@/context/TripContext';
 import { useAuth } from '@/context/AuthContext';
+import { useTrip } from '@/context/TripContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,12 +16,11 @@ import {
 } from '@/components/ui/dialog';
 import EmojiPicker from '@/components/ui/emoji-picker';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 const CreateTripForm = () => {
   const navigate = useNavigate();
-  const { createTrip, isLoading } = useTrip();
   const { user } = useAuth();
+  const { createTrip, isLoading } = useTrip();
   
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -31,28 +31,30 @@ const CreateTripForm = () => {
     e.preventDefault();
     setError('');
     
+    if (!name.trim()) {
+      setError('Please enter a trip name');
+      return;
+    }
+    
     try {
-      // Get the current session directly to ensure we have the most up-to-date user ID
-      const { data: sessionData } = await supabase.auth.getSession();
+      // Ensure user is authenticated
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        throw new Error(sessionError.message);
+      }
       
       if (!sessionData.session || !sessionData.session.user) {
-        setError('You must be logged in to create a trip');
+        setError('Authentication required. Please sign in again.');
         return;
       }
       
-      if (!name) {
-        setError('Please enter a trip name');
-        return;
-      }
-      
-      console.log("Creating trip with authenticated user ID:", sessionData.session.user.id);
-      
-      // Create unique code for the trip (6 character alphanumeric code)
-      const tripCode = generateRandomCode();
+      // Generate a unique 6-character alphanumeric code for trip sharing
+      const tripCode = generateTripCode();
       
       const trip = await createTrip({
-        name,
-        description,
+        name: name.trim(),
+        description: description.trim(),
         emoji,
         code: tripCode,
         participants: [],
@@ -60,23 +62,29 @@ const CreateTripForm = () => {
       });
       
       toast({
-        title: "Success",
-        description: `Trip "${name}" created successfully!`,
+        title: "Trip Created",
+        description: `Your trip "${name}" has been created successfully!`,
       });
       
+      // Navigate to the new trip's detail page
       navigate(`/trip/${trip.id}`);
     } catch (err) {
       console.error("Error creating trip:", err);
       setError(err instanceof Error ? err.message : 'Failed to create trip');
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to create trip',
+        variant: "destructive"
+      });
     }
   };
   
-  // Helper function to generate a random 6-character trip code
-  const generateRandomCode = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  // Generate a random 6-character alphanumeric trip code
+  const generateTripCode = () => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
     for (let i = 0; i < 6; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
+      code += characters.charAt(Math.floor(Math.random() * characters.length));
     }
     return code;
   };
@@ -86,15 +94,17 @@ const CreateTripForm = () => {
       <DialogHeader>
         <DialogTitle>Create a New Trip</DialogTitle>
         <DialogDescription>
-          Set up your new trip to start splitting expenses
+          Set up your new trip to start tracking and splitting expenses
         </DialogDescription>
       </DialogHeader>
       
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-        {error && <div className="p-3 bg-red-100 text-red-700 rounded-md text-sm">{error}</div>}
+        {error && (
+          <div className="p-3 bg-red-100 text-red-700 rounded-md text-sm">{error}</div>
+        )}
         
         <div className="space-y-2">
-          <Label htmlFor="emoji">Trip Emoji</Label>
+          <Label htmlFor="emoji">Trip Icon</Label>
           <div className="flex items-center gap-3">
             <div className="text-3xl">{emoji}</div>
             <EmojiPicker selectedEmoji={emoji} onEmojiSelect={setEmoji} />
@@ -109,6 +119,7 @@ const CreateTripForm = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            className="w-full"
           />
         </div>
         
@@ -123,13 +134,16 @@ const CreateTripForm = () => {
           />
         </div>
         
-        <div className="flex justify-end pt-4">
+        <div className="flex justify-end gap-2 pt-4">
           <DialogClose asChild>
-            <Button type="button" variant="outline" className="mr-2">
+            <Button type="button" variant="outline">
               Cancel
             </Button>
           </DialogClose>
-          <Button type="submit" disabled={isLoading || !name}>
+          <Button 
+            type="submit" 
+            disabled={isLoading || !name.trim()}
+          >
             {isLoading ? 'Creating...' : 'Create Trip'}
           </Button>
         </div>
