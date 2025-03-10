@@ -1,21 +1,13 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { toast } from "sonner";
-
-interface User {
-  id: string;
-  email: string;
-  username: string;
-  emoji: string;
-}
+import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { mockUsers, User } from "@/lib/mockData";
 
 interface AuthContextType {
   user: User | null;
+  signIn: (email: string, password: string) => Promise<User>;
+  signUp: (email: string, password: string) => Promise<User>;
+  signOut: () => void;
   isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, username: string, emoji: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  updateProfile: (data: Partial<User>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,110 +16,85 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for existing session on load
   useEffect(() => {
-    const loadUserFromStorage = () => {
-      setIsLoading(true);
+    // Simulate checking local storage for a saved session
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
       try {
-        const storedUser = localStorage.getItem('splitUser');
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
+        setUser(JSON.parse(savedUser));
       } catch (error) {
-        console.error('Failed to load user from storage:', error);
-      } finally {
-        setIsLoading(false);
+        console.error("Failed to parse saved user:", error);
       }
-    };
-    
-    loadUserFromStorage();
+    }
+    setIsLoading(false);
   }, []);
 
-  // Mock authentication functions (will be replaced with Supabase)
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
-    try {
-      // Mock auth - replace with Supabase
-      // This will be replaced once Supabase is integrated
-      const mockUser = {
-        id: `user-${Date.now()}`,
-        email,
-        username: email.split('@')[0],
-        emoji: '😎',
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('splitUser', JSON.stringify(mockUser));
-      toast.success("Successfully signed in!");
-    } catch (error) {
-      console.error('Sign in error:', error);
-      toast.error("Failed to sign in");
-      throw error;
-    } finally {
+    
+    // Simulate API authentication delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Find user by email (in a real app, would verify password too)
+    const existingUser = mockUsers.find(u => u.email === email);
+    
+    if (!existingUser) {
       setIsLoading(false);
+      throw new Error("Invalid email or password");
     }
+    
+    // Save user to state and local storage
+    setUser(existingUser);
+    localStorage.setItem("user", JSON.stringify(existingUser));
+    
+    setIsLoading(false);
+    return existingUser;
   };
 
-  const signUp = async (email: string, password: string, username: string, emoji: string) => {
+  const signUp = async (email: string, password: string) => {
     setIsLoading(true);
-    try {
-      // Mock signup - replace with Supabase
-      const mockUser = {
-        id: `user-${Date.now()}`,
-        email,
-        username,
-        emoji,
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('splitUser', JSON.stringify(mockUser));
-      toast.success("Account created successfully!");
-    } catch (error) {
-      console.error('Sign up error:', error);
-      toast.error("Failed to create account");
-      throw error;
-    } finally {
+    
+    // Simulate API authentication delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Check if user already exists
+    const existingUser = mockUsers.find(u => u.email === email);
+    
+    if (existingUser) {
       setIsLoading(false);
+      throw new Error("Email already in use");
     }
+    
+    // Create new user
+    const newUser: User = {
+      id: `user-${Date.now()}`,
+      email,
+      emoji: "😀" // Default emoji
+    };
+    
+    // Save user to state and local storage
+    setUser(newUser);
+    localStorage.setItem("user", JSON.stringify(newUser));
+    
+    setIsLoading(false);
+    return newUser;
   };
 
-  const signOut = async () => {
-    setIsLoading(true);
-    try {
-      // Mock signout - replace with Supabase
-      setUser(null);
-      localStorage.removeItem('splitUser');
-      toast.success("Successfully signed out");
-    } catch (error) {
-      console.error('Sign out error:', error);
-      toast.error("Failed to sign out");
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const updateProfile = async (data: Partial<User>) => {
-    setIsLoading(true);
-    try {
-      // Mock profile update - replace with Supabase
-      if (user) {
-        const updatedUser = { ...user, ...data };
-        setUser(updatedUser);
-        localStorage.setItem('splitUser', JSON.stringify(updatedUser));
-        toast.success("Profile updated successfully");
-      }
-    } catch (error) {
-      console.error('Update profile error:', error);
-      toast.error("Failed to update profile");
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+  const signOut = () => {
+    setUser(null);
+    localStorage.removeItem("user");
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signUp, signOut, updateProfile }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        signIn,
+        signUp,
+        signOut,
+        isLoading
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -136,7 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
