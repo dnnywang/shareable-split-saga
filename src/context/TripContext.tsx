@@ -1,7 +1,7 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { mockTrips, mockPurchases, Trip as MockTrip, Purchase as MockPurchase, User } from "@/lib/mockData";
 import { useAuth } from "./AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // Export these interfaces so they can be used in other components
 export interface Participant extends User {
@@ -14,11 +14,26 @@ export interface Payment {
   amount: number;
 }
 
-export interface Purchase extends MockPurchase {
-  // Extending the MockPurchase interface
+export interface Purchase {
+  id: string;
+  tripId: string;
+  title: string;
+  amount: number;
+  date: string;
+  paidBy: { userId: string; amount: number }[];
+  splitBetween: { userId: string; amount: number }[];
+  createdBy: string;
 }
 
-export interface Trip extends MockTrip {
+export interface Trip {
+  id: string;
+  name: string;
+  description?: string;
+  emoji?: string;
+  code: string;
+  createdAt: string;
+  totalSpent: number;
+  participants: Participant[];
   purchases: Purchase[];
 }
 
@@ -48,30 +63,137 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
   const [currentTrip, setCurrentTripState] = useState<Trip | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize trips and purchases from mock data
+  // Fetch trips from Supabase when user changes
   useEffect(() => {
-    // Convert mock trips to our Trip type with purchases array
-    const initialTrips = mockTrips.map(trip => ({ 
-      ...trip, 
-      purchases: [] 
-    }));
-    
-    setTrips(initialTrips);
-    
-    // Set purchases and update trip.purchases references
-    setPurchases(mockPurchases);
-    
-    // Update each trip's purchases array
-    const updatedTrips = initialTrips.map(trip => {
-      const tripPurchases = mockPurchases.filter(p => p.tripId === trip.id);
-      return {
-        ...trip,
-        purchases: tripPurchases
-      };
-    });
-    
-    setTrips(updatedTrips);
-  }, []);
+    if (user) {
+      fetchTrips();
+    } else {
+      // Reset state when user logs out
+      setTrips([]);
+      setPurchases([]);
+      setCurrentTripState(null);
+    }
+  }, [user]);
+
+  const fetchTrips = async () => {
+    setIsLoading(true);
+    try {
+      // First get trips where the user is a participant
+      const { data: participantData, error: participantError } = await supabase
+        .from('trip_participants')
+        .select('trip_id')
+        .eq('user_id', user?.id);
+
+      if (participantError) {
+        throw participantError;
+      }
+
+      const tripIds = participantData.map(p => p.trip_id);
+      
+      // Get the trip details
+      const { data: tripsData, error: tripsError } = await supabase
+        .from('trips')
+        .select('*')
+        .in('id', tripIds.length > 0 ? tripIds : ['no-trips-placeholder']);
+
+      if (tripsError) {
+        throw tripsError;
+      }
+
+      // Format trips for the app
+      const formattedTrips: Trip[] = await Promise.all(tripsData.map(async (trip) => {
+        // Get participants for each trip
+        const { data: participantsData, error: participantsError } = await supabase
+          .from('trip_participants')
+          .select('*')
+          .eq('trip_id', trip.id);
+
+        if (participantsError) {
+          throw participantsError;
+        }
+
+        // Get purchases for each trip
+        const { data: purchasesData, error: purchasesError } = await supabase
+          .from('purchases')
+          .select('*')
+          .eq('trip_id', trip.id);
+
+        if (purchasesError) {
+          throw purchasesError;
+        }
+
+        // Format purchases with payers and splits
+        const tripPurchases: Purchase[] = await Promise.all(purchasesData.map(async (purchase) => {
+          // Get payers
+          const { data: payersData, error: payersError } = await supabase
+            .from('purchase_payers')
+            .select('*')
+            .eq('purchase_id', purchase.id);
+
+          if (payersError) {
+            throw payersError;
+          }
+
+          // Get splits
+          const { data: splitsData, error: splitsError } = await supabase
+            .from('purchase_splits')
+            .select('*')
+            .eq('purchase_id', purchase.id);
+
+          if (splitsError) {
+            throw splitsError;
+          }
+
+          return {
+            id: purchase.id,
+            tripId: purchase.trip_id,
+            title: purchase.title,
+            amount: parseFloat(purchase.amount),
+            date: purchase.date,
+            paidBy: payersData.map(payer => ({
+              userId: payer.user_id,
+              amount: parseFloat(payer.amount)
+            })),
+            splitBetween: splitsData.map(split => ({
+              userId: split.user_id,
+              amount: parseFloat(split.amount)
+            })),
+            createdBy: purchase.created_by
+          };
+        }));
+
+        // Add purchases to our state
+        setPurchases(prev => [...prev, ...tripPurchases]);
+
+        // Calculate total spent
+        const totalSpent = tripPurchases.reduce((total, p) => total + p.amount, 0);
+
+        return {
+          id: trip.id,
+          name: trip.name,
+          description: trip.description || "",
+          emoji: trip.emoji || "✈️",
+          code: trip.code,
+          createdAt: trip.created_at,
+          totalSpent: totalSpent,
+          participants: participantsData.map(p => ({
+            id: p.user_id,
+            email: p.username, // Using username as email for now
+            emoji: p.emoji,
+            name: p.username
+          })),
+          purchases: tripPurchases
+        };
+      }));
+
+      setTrips(formattedTrips);
+    } catch (error: any) {
+      console.error("Error fetching trips:", error);
+      toast.error("Failed to load trips");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const selectTrip = (tripId: string) => {
     const trip = trips.find(t => t.id === tripId);
@@ -106,16 +228,62 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     
     try {
+      // Insert new trip into Supabase
+      const { data: newTripData, error: tripError } = await supabase
+        .from('trips')
+        .insert({
+          name: tripData.name,
+          description: tripData.description || null,
+          emoji: tripData.emoji || "✈️",
+          code: tripData.code,
+          created_by: user?.id
+        })
+        .select()
+        .single();
+
+      if (tripError) {
+        throw tripError;
+      }
+
+      // Add creator as a participant
+      const { error: participantError } = await supabase
+        .from('trip_participants')
+        .insert({
+          trip_id: newTripData.id,
+          user_id: user?.id,
+          username: user?.name || user?.email,
+          emoji: user?.emoji
+        });
+
+      if (participantError) {
+        throw participantError;
+      }
+
+      // Format the new trip for the app
       const newTrip: Trip = {
-        ...tripData,
-        id: `trip-${Date.now()}`,
-        createdAt: new Date().toISOString(),
+        id: newTripData.id,
+        name: newTripData.name,
+        description: newTripData.description || "",
+        emoji: newTripData.emoji || "✈️",
+        code: newTripData.code,
+        createdAt: newTripData.created_at,
         totalSpent: 0,
+        participants: [{
+          id: user?.id || "",
+          email: user?.email || "",
+          name: user?.name || null,
+          emoji: user?.emoji || null
+        }],
         purchases: []
       };
       
+      // Update local state
       setTrips(prev => [...prev, newTrip]);
       return newTrip;
+    } catch (error: any) {
+      console.error("Error creating trip:", error);
+      toast.error(error.message || "Failed to create trip");
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -125,26 +293,70 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     
     try {
-      const trip = trips.find(t => t.code === code);
-      if (!trip) return null;
+      // Find trip by code
+      const { data: tripData, error: tripError } = await supabase
+        .from('trips')
+        .select('*')
+        .eq('code', code)
+        .single();
+
+      if (tripError) {
+        if (tripError.code === 'PGRST116') {
+          toast.error("Trip not found. Please check the code and try again.");
+          return null;
+        }
+        throw tripError;
+      }
+
+      // Check if user is already a participant
+      const { data: existingParticipant, error: checkError } = await supabase
+        .from('trip_participants')
+        .select('*')
+        .eq('trip_id', tripData.id)
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+
+      if (existingParticipant) {
+        toast.info("You're already a participant in this trip!");
+        // Refresh trips to ensure we have the latest data
+        await fetchTrips();
+        const trip = trips.find(t => t.id === tripData.id);
+        return trip || null;
+      }
+
+      // Add user as a participant
+      const { error: joinError } = await supabase
+        .from('trip_participants')
+        .insert({
+          trip_id: tripData.id,
+          user_id: user?.id,
+          username: user?.name || user?.email,
+          emoji: user?.emoji
+        });
+
+      if (joinError) {
+        throw joinError;
+      }
+
+      // Refresh trips to get the one we just joined
+      await fetchTrips();
       
-      // If user is already a participant, just return the trip
-      if (trip.participants.some(p => p.id === user?.id)) {
-        return trip;
+      // Find the trip we just joined
+      const joinedTrip = trips.find(t => t.id === tripData.id);
+      
+      if (!joinedTrip) {
+        throw new Error("Failed to retrieve joined trip");
       }
       
-      // Add user to trip participants
-      const updatedTrip = {
-        ...trip,
-        participants: [...trip.participants, {
-          id: user?.id || 'unknown',
-          email: user?.email || 'unknown',
-          emoji: user?.emoji
-        }]
-      };
-      
-      setTrips(prev => prev.map(t => t.id === trip.id ? updatedTrip : t));
-      return updatedTrip;
+      return joinedTrip;
+    } catch (error: any) {
+      console.error("Error joining trip:", error);
+      toast.error(error.message || "Failed to join trip");
+      return null;
     } finally {
       setIsLoading(false);
     }
@@ -154,12 +366,62 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     
     try {
+      // Insert new purchase into Supabase
+      const { data: newPurchaseData, error: purchaseError } = await supabase
+        .from('purchases')
+        .insert({
+          trip_id: purchaseData.tripId,
+          title: purchaseData.title,
+          amount: purchaseData.amount,
+          created_by: user?.id,
+          date: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (purchaseError) {
+        throw purchaseError;
+      }
+
+      // Insert payers
+      const payerPromises = purchaseData.paidBy.map(payer => 
+        supabase
+          .from('purchase_payers')
+          .insert({
+            purchase_id: newPurchaseData.id,
+            user_id: payer.userId,
+            amount: payer.amount
+          })
+      );
+
+      await Promise.all(payerPromises);
+
+      // Insert splits
+      const splitPromises = purchaseData.splitBetween.map(split => 
+        supabase
+          .from('purchase_splits')
+          .insert({
+            purchase_id: newPurchaseData.id,
+            user_id: split.userId,
+            amount: split.amount
+          })
+      );
+
+      await Promise.all(splitPromises);
+
+      // Format the new purchase for the app
       const newPurchase: Purchase = {
-        ...purchaseData,
-        id: `purchase-${Date.now()}`,
-        date: new Date().toISOString()
+        id: newPurchaseData.id,
+        tripId: newPurchaseData.trip_id,
+        title: newPurchaseData.title,
+        amount: parseFloat(newPurchaseData.amount),
+        date: newPurchaseData.date,
+        paidBy: purchaseData.paidBy,
+        splitBetween: purchaseData.splitBetween,
+        createdBy: newPurchaseData.created_by
       };
       
+      // Update local state
       setPurchases(prev => [...prev, newPurchase]);
       
       // Update trip total and add purchase to trip.purchases
@@ -184,6 +446,10 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
       }
       
       return newPurchase;
+    } catch (error: any) {
+      console.error("Error adding purchase:", error);
+      toast.error(error.message || "Failed to add purchase");
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -195,31 +461,46 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     try {
       const purchaseToRemove = purchases.find(p => p.id === purchaseId);
       
-      if (purchaseToRemove) {
-        // Remove purchase from purchases array
-        setPurchases(prev => prev.filter(p => p.id !== purchaseId));
-        
-        // Update trip total and purchases array
-        setTrips(prev => prev.map(trip => {
-          if (trip.id === purchaseToRemove.tripId) {
-            return {
-              ...trip,
-              totalSpent: trip.totalSpent - purchaseToRemove.amount,
-              purchases: (trip.purchases || []).filter(p => p.id !== purchaseId)
-            };
-          }
-          return trip;
-        }));
-        
-        // Update current trip if this purchase belongs to it
-        if (currentTrip && currentTrip.id === purchaseToRemove.tripId) {
-          setCurrentTripState({
-            ...currentTrip,
-            totalSpent: currentTrip.totalSpent - purchaseToRemove.amount,
-            purchases: currentTrip.purchases.filter(p => p.id !== purchaseId)
-          });
-        }
+      if (!purchaseToRemove) {
+        throw new Error("Purchase not found");
       }
+
+      // Delete purchase from Supabase (cascade will handle payers and splits)
+      const { error } = await supabase
+        .from('purchases')
+        .delete()
+        .eq('id', purchaseId);
+
+      if (error) {
+        throw error;
+      }
+      
+      // Remove purchase from purchases array
+      setPurchases(prev => prev.filter(p => p.id !== purchaseId));
+      
+      // Update trip total and purchases array
+      setTrips(prev => prev.map(trip => {
+        if (trip.id === purchaseToRemove.tripId) {
+          return {
+            ...trip,
+            totalSpent: trip.totalSpent - purchaseToRemove.amount,
+            purchases: (trip.purchases || []).filter(p => p.id !== purchaseId)
+          };
+        }
+        return trip;
+      }));
+      
+      // Update current trip if this purchase belongs to it
+      if (currentTrip && currentTrip.id === purchaseToRemove.tripId) {
+        setCurrentTripState({
+          ...currentTrip,
+          totalSpent: currentTrip.totalSpent - purchaseToRemove.amount,
+          purchases: currentTrip.purchases.filter(p => p.id !== purchaseId)
+        });
+      }
+    } catch (error: any) {
+      console.error("Error removing purchase:", error);
+      toast.error(error.message || "Failed to remove purchase");
     } finally {
       setIsLoading(false);
     }
@@ -231,13 +512,33 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     try {
       if (!currentTrip) return;
       
+      // Update trip in Supabase
+      const { error } = await supabase
+        .from('trips')
+        .update({
+          name: details.name,
+          description: details.description,
+          emoji: details.emoji
+        })
+        .eq('id', currentTrip.id);
+
+      if (error) {
+        throw error;
+      }
+      
       const updatedTrip = {
         ...currentTrip,
         ...details
       };
       
+      // Update trips array
       setTrips(prev => prev.map(t => t.id === currentTrip.id ? updatedTrip : t));
+      
+      // Update current trip
       setCurrentTripState(updatedTrip);
+    } catch (error: any) {
+      console.error("Error updating trip details:", error);
+      toast.error(error.message || "Failed to update trip");
     } finally {
       setIsLoading(false);
     }

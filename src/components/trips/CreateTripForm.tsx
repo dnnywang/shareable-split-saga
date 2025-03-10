@@ -10,8 +10,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogClose
 } from '@/components/ui/dialog';
 import EmojiPicker from '@/components/ui/emoji-picker';
+import { toast } from 'sonner';
 
 const CreateTripForm = () => {
   const navigate = useNavigate();
@@ -41,6 +43,7 @@ const CreateTripForm = () => {
         purchases: []
       });
       
+      toast.success(`Trip "${name}" created successfully!`);
       navigate(`/trip/${trip.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create trip');
@@ -100,9 +103,11 @@ const CreateTripForm = () => {
         </div>
         
         <div className="flex justify-end pt-4">
-          <Button type="button" variant="outline" className="mr-2">
-            Cancel
-          </Button>
+          <DialogClose asChild>
+            <Button type="button" variant="outline" className="mr-2">
+              Cancel
+            </Button>
+          </DialogClose>
           <Button type="submit" disabled={isLoading || !name}>
             {isLoading ? 'Creating...' : 'Create Trip'}
           </Button>

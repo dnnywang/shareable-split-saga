@@ -9,11 +9,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogClose
 } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
 const JoinTripForm = () => {
   const navigate = useNavigate();
-  const { joinTrip, isLoading, trips } = useTrip();
+  const { joinTrip, isLoading } = useTrip();
   
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -31,7 +33,10 @@ const JoinTripForm = () => {
       const joinedTrip = await joinTrip(code);
       
       if (joinedTrip) {
+        toast.success(`Joined trip "${joinedTrip.name}" successfully!`);
         navigate(`/trip/${joinedTrip.id}`);
+      } else {
+        setError('Could not find a trip with this code');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to join trip');
@@ -67,9 +72,11 @@ const JoinTripForm = () => {
         </div>
         
         <div className="flex justify-end pt-4">
-          <Button type="button" variant="outline" className="mr-2">
-            Cancel
-          </Button>
+          <DialogClose asChild>
+            <Button type="button" variant="outline" className="mr-2">
+              Cancel
+            </Button>
+          </DialogClose>
           <Button type="submit" disabled={isLoading || code.length !== 6}>
             {isLoading ? 'Joining...' : 'Join Trip'}
           </Button>
