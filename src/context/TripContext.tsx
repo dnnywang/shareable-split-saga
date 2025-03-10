@@ -387,7 +387,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         .insert({
           trip_id: purchaseData.tripId,
           title: purchaseData.title,
-          amount: purchaseData.amount,
+          amount: purchaseData.amount.toString(), // Convert to string here
           created_by: purchaseData.createdBy,
           date: new Date().toISOString()
         })
@@ -429,7 +429,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         id: newPurchaseData.id,
         tripId: newPurchaseData.trip_id,
         title: newPurchaseData.title,
-        amount: parseFloat(newPurchaseData.amount),
+        amount: parseFloat(newPurchaseData.amount.toString()),
         date: newPurchaseData.date,
         paidBy: purchaseData.paidBy,
         splitBetween: purchaseData.splitBetween,
