@@ -208,6 +208,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_purchase: {
+        Args: {
+          purchase_id: string
+          user_id: string
+        }
+        Returns: boolean
+      }
       is_trip_participant: {
         Args: {
           trip_id: string
