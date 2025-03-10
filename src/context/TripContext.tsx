@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -69,12 +68,10 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
   const [currentTrip, setCurrentTripState] = useState<Trip | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch trips from Supabase when user changes
   useEffect(() => {
     if (user) {
       fetchTrips();
     } else {
-      // Reset state when user logs out
       setTrips([]);
       setPurchases([]);
       setCurrentTripState(null);
@@ -84,7 +81,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
   const fetchTrips = async () => {
     setIsLoading(true);
     try {
-      // First get trips where the user is a participant
       const { data: participantData, error: participantError } = await supabase
         .from('trip_participants')
         .select('trip_id')
@@ -95,7 +91,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (!participantData || participantData.length === 0) {
-        // If user has no trips, return empty arrays
         setTrips([]);
         setPurchases([]);
         setIsLoading(false);
@@ -104,7 +99,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
 
       const tripIds = participantData.map(p => p.trip_id);
       
-      // Get the trip details
       const { data: tripsData, error: tripsError } = await supabase
         .from('trips')
         .select('*')
@@ -114,9 +108,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         throw tripsError;
       }
 
-      // Format trips for the app
       const formattedTrips: Trip[] = await Promise.all(tripsData.map(async (trip) => {
-        // Get participants for each trip
         const { data: participantsData, error: participantsError } = await supabase
           .from('trip_participants')
           .select('*')
@@ -126,7 +118,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
           throw participantsError;
         }
 
-        // Get purchases for each trip
         const { data: purchasesData, error: purchasesError } = await supabase
           .from('purchases')
           .select('*')
@@ -136,9 +127,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
           throw purchasesError;
         }
 
-        // Format purchases with payers and splits
         const tripPurchases: Purchase[] = await Promise.all(purchasesData.map(async (purchase) => {
-          // Get payers
           const { data: payersData, error: payersError } = await supabase
             .from('purchase_payers')
             .select('*')
@@ -148,7 +137,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
             throw payersError;
           }
 
-          // Get splits
           const { data: splitsData, error: splitsError } = await supabase
             .from('purchase_splits')
             .select('*')
@@ -176,10 +164,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
           };
         }));
 
-        // Add purchases to our state
-        setPurchases(prev => [...prev, ...tripPurchases]);
-
-        // Calculate total spent
         const totalSpent = tripPurchases.reduce((total, p) => total + p.amount, 0);
 
         return {
@@ -192,7 +176,7 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
           totalSpent: totalSpent,
           participants: participantsData.map(p => ({
             id: p.user_id,
-            email: p.username, // Using username as email for now
+            email: p.username,
             username: p.username,
             emoji: p.emoji,
             name: p.username
@@ -214,10 +198,8 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     const trip = trips.find(t => t.id === tripId);
     
     if (trip) {
-      // Get all purchases for this trip
       const tripPurchases = purchases.filter(p => p.tripId === tripId);
       
-      // Create a new trip object with the purchases array
       const tripWithPurchases = {
         ...trip,
         purchases: tripPurchases
@@ -243,7 +225,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     
     try {
-      // Insert new trip into Supabase
       const { data: newTripData, error: tripError } = await supabase
         .from('trips')
         .insert({
@@ -260,7 +241,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         throw tripError;
       }
 
-      // Add creator as a participant
       const { error: participantError } = await supabase
         .from('trip_participants')
         .insert({
@@ -274,7 +254,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         throw participantError;
       }
 
-      // Format the new trip for the app
       const newTrip: Trip = {
         id: newTripData.id,
         name: newTripData.name,
@@ -287,12 +266,12 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
           id: user?.id || "",
           email: user?.email || "",
           name: user?.name || null,
-          emoji: user?.emoji || null
+          emoji: user?.emoji || null,
+          username: user?.name || user?.email?.split('@')[0] || ""
         }],
         purchases: []
       };
       
-      // Update local state
       setTrips(prev => [...prev, newTrip]);
       return newTrip;
     } catch (error: any) {
@@ -308,7 +287,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     
     try {
-      // Find trip by code
       const { data: tripData, error: tripError } = await supabase
         .from('trips')
         .select('*')
@@ -323,7 +301,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         throw tripError;
       }
 
-      // Check if user is already a participant
       const { data: existingParticipant, error: checkError } = await supabase
         .from('trip_participants')
         .select('*')
@@ -337,13 +314,11 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
 
       if (existingParticipant) {
         toast.info("You're already a participant in this trip!");
-        // Refresh trips to ensure we have the latest data
         await fetchTrips();
         const trip = trips.find(t => t.id === tripData.id);
         return trip || null;
       }
 
-      // Add user as a participant
       const { error: joinError } = await supabase
         .from('trip_participants')
         .insert({
@@ -357,10 +332,8 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         throw joinError;
       }
 
-      // Refresh trips to get the one we just joined
       await fetchTrips();
       
-      // Find the trip we just joined
       const joinedTrip = trips.find(t => t.id === tripData.id);
       
       if (!joinedTrip) {
@@ -381,13 +354,12 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     
     try {
-      // Insert new purchase into Supabase
       const { data: newPurchaseData, error: purchaseError } = await supabase
         .from('purchases')
         .insert({
           trip_id: purchaseData.tripId,
           title: purchaseData.title,
-          amount: purchaseData.amount.toString(), // Convert to string here
+          amount: parseFloat(purchaseData.amount.toString()),
           created_by: purchaseData.createdBy,
           date: new Date().toISOString()
         })
@@ -398,7 +370,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         throw purchaseError;
       }
 
-      // Insert payers
       const payerPromises = purchaseData.paidBy.map(payer => 
         supabase
           .from('purchase_payers')
@@ -411,7 +382,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
 
       await Promise.all(payerPromises);
 
-      // Insert splits
       const splitPromises = purchaseData.splitBetween.map(split => 
         supabase
           .from('purchase_splits')
@@ -424,7 +394,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
 
       await Promise.all(splitPromises);
 
-      // Format the new purchase for the app
       const newPurchase: Purchase = {
         id: newPurchaseData.id,
         tripId: newPurchaseData.trip_id,
@@ -436,10 +405,8 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         createdBy: newPurchaseData.created_by
       };
       
-      // Update local state
       setPurchases(prev => [...prev, newPurchase]);
       
-      // Update trip total and add purchase to trip.purchases
       setTrips(prev => prev.map(trip => {
         if (trip.id === purchaseData.tripId) {
           return {
@@ -451,7 +418,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         return trip;
       }));
       
-      // Update current trip if this purchase belongs to it
       if (currentTrip && currentTrip.id === purchaseData.tripId) {
         setCurrentTripState({
           ...currentTrip,
@@ -480,7 +446,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Purchase not found");
       }
 
-      // Delete purchase from Supabase (cascade will handle payers and splits)
       const { error } = await supabase
         .from('purchases')
         .delete()
@@ -490,10 +455,8 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         throw error;
       }
       
-      // Remove purchase from purchases array
       setPurchases(prev => prev.filter(p => p.id !== purchaseId));
       
-      // Update trip total and purchases array
       setTrips(prev => prev.map(trip => {
         if (trip.id === purchaseToRemove.tripId) {
           return {
@@ -505,7 +468,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         return trip;
       }));
       
-      // Update current trip if this purchase belongs to it
       if (currentTrip && currentTrip.id === purchaseToRemove.tripId) {
         setCurrentTripState({
           ...currentTrip,
@@ -527,7 +489,6 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     try {
       if (!currentTrip) return;
       
-      // Update trip in Supabase
       const { error } = await supabase
         .from('trips')
         .update({
@@ -546,10 +507,8 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         ...details
       };
       
-      // Update trips array
       setTrips(prev => prev.map(t => t.id === currentTrip.id ? updatedTrip : t));
       
-      // Update current trip
       setCurrentTripState(updatedTrip);
     } catch (error: any) {
       console.error("Error updating trip details:", error);
@@ -568,21 +527,17 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     
     const balances: Record<string, number> = {};
     
-    // Initialize balances to 0 for all participants
     currentTrip.participants.forEach(participant => {
       balances[participant.id] = 0;
     });
     
-    // Calculate based on all purchases for the trip
     const tripPurchases = getTripPurchases(currentTrip.id);
     
     tripPurchases.forEach(purchase => {
-      // Add money for people who paid
       purchase.paidBy.forEach(payer => {
         balances[payer.userId] = (balances[payer.userId] || 0) + payer.amount;
       });
       
-      // Subtract money for people who owe
       purchase.splitBetween.forEach(debtor => {
         balances[debtor.userId] = (balances[debtor.userId] || 0) - debtor.amount;
       });
@@ -597,23 +552,21 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
     const balances = calculateBalances();
     const payments: Payment[] = [];
     
-    // Extract creditors (positive balance) and debtors (negative balance)
     const creditors = Object.entries(balances)
       .filter(([_, balance]) => balance > 0)
-      .sort((a, b) => b[1] - a[1]); // Sort by highest creditor first
+      .sort((a, b) => b[1] - a[1]);
     
     const debtors = Object.entries(balances)
       .filter(([_, balance]) => balance < 0)
-      .sort((a, b) => a[1] - b[1]); // Sort by highest debtor first
+      .sort((a, b) => a[1] - b[1]);
     
-    // Match debtors to creditors
     while (debtors.length > 0 && creditors.length > 0) {
       const [debtorId, debtorBalance] = debtors[0];
       const [creditorId, creditorBalance] = creditors[0];
       
       const amount = Math.min(Math.abs(debtorBalance), creditorBalance);
       
-      if (amount > 0.01) { // Only add payments for meaningful amounts
+      if (amount > 0.01) {
         payments.push({
           from: debtorId,
           to: creditorId,
@@ -621,11 +574,9 @@ export const TripProvider = ({ children }: { children: ReactNode }) => {
         });
       }
       
-      // Update balances
       const newDebtorBalance = debtorBalance + amount;
       const newCreditorBalance = creditorBalance - amount;
       
-      // Remove or update creditor and debtor
       if (Math.abs(newCreditorBalance) < 0.01) {
         creditors.shift();
       } else {
